@@ -13,16 +13,19 @@ import androidx.core.view.WindowInsetsCompat;
 
 import java.io.IOException;
 
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Headers;
 import okhttp3.OkHttp;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 public class MainActivity extends AppCompatActivity {
     Button getButton;
 
     OkHttpClient client;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,30 +49,37 @@ public class MainActivity extends AppCompatActivity {
         getButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Thread newThread = new Thread(){
+                client.newCall(request).enqueue(new Callback() {
                     @Override
-                    public void run() {
-                        try (Response response = client.newCall(request).execute()) {
+                    public void onFailure(Call call, IOException e) {
+                        e.printStackTrace();
+                    }
+
+                    @Override
+                    public void onResponse(Call call, Response response) throws IOException {
+                        try (ResponseBody responseBody = response.body()) {
                             if (!response.isSuccessful()) {
-                                throw new IOException("Запрос к серверу не был успешен: " +
+                                throw new IOException("Request to server was not successful: " +
                                         response.code() + " " + response.message());
                             }
-                            // пример получения конкретного заголовка ответа
-                            Log.d("test",response.toString());
-                            // вывод тела ответа
-                            Log.d("test",response.body().string());
-                        } catch (IOException e) {
-                            Log.d("test","Ошибка подключения: " + e);
+
+
+                            if (responseBody != null) {
+
+                                Headers responseHeaders = response.headers();
+                                for (int i = 0, size = responseHeaders.size(); i < size; i++) {
+
+                                    Log.d("test", responseHeaders.name(i) + ": " + responseHeaders.value(i));
+                                }
+
+                                Log.d("test", responseBody.string());
+                            } else {
+                                Log.e("test", "Response body is null");
+                            }
                         }
                     }
-                };
-
-
-
-                newThread.start();
+                });
             }
-
         });
-
     }
 }
